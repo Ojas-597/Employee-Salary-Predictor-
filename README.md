@@ -60,7 +60,7 @@ streamlit run app.py
 
 ---
 
-👤 Author
+##👤 Author
 
 Ojas
 GitHub: https://github.com/Ojas-597
