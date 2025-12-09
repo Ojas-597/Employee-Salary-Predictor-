@@ -89,17 +89,4 @@ The app displays the predicted salary instantly on the webpage.
 
 ## 👤 Author
 
-Created by Ojas
-
-
----
-
-## Quick Important Fix for Your Repo ⚠️
-
-Your file name is correct now:
-✅ `best_model.pkl`
-
-Make sure your `app.py` includes:
-
-```python
-model = joblib.load("best_model.pkl")
+Created by Ojaswita Desai
