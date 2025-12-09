@@ -1,48 +1,63 @@
+%%writefile app.py
 import streamlit as st
 import pandas as pd
 import joblib
 
 # Load the trained model
-model = joblib.load("salary_predictor_model.pkl")
+model = joblib.load("best_model.pkl")
 
-st.title("💼 Employee Salary Predictor")
+st.set_page_config(page_title="Employee Salary Prediction", page_icon="💼", layout="centered" )
 
-st.write("Enter employee details below:")
+st.title("🪪 Employee Salary Prediction App")
+st.markdown("Predict whether an employee earns >50K or ≤50K based on input features.")
 
-# Input fields
-age = st.number_input("Age", min_value=18, max_value=90)
-workclass = st.selectbox("Workclass", ["Private", "Self-emp-not-inc", "Self-emp-inc", "Federal-gov", "Local-gov", "State-gov", "Without-pay", "Never-worked"])
-education = st.selectbox("Education", ["Bachelors", "HS-grad", "11th", "Masters", "9th", "Some-college", "Assoc-acdm", "Assoc-voc", "7th-8th", "Doctorate", "Prof-school", "5th-6th", "10th", "1st-4th", "Preschool", "12th"])
-marital_status = st.selectbox("Marital Status", ["Married-civ-spouse", "Divorced", "Never-married", "Separated", "Widowed", "Married-spouse-absent"])
-occupation = st.selectbox("Occupation", ["Tech-support", "Craft-repair", "Other-service", "Sales", "Exec-managerial", "Prof-specialty", "Handlers-cleaners", "Machine-op-inspct", "Adm-clerical", "Farming-fishing", "Transport-moving", "Priv-house-serv", "Protective-serv", "Armed-Forces"])
-relationship = st.selectbox("Relationship", ["Wife", "Own-child", "Husband", "Not-in-family", "Other-relative", "Unmarried"])
-race = st.selectbox("Race", ["White", "Asian-Pac-Islander", "Amer-Indian-Eskimo", "Other", "Black"])
-gender = st.selectbox("Gender", ["Male", "Female"])
-capital_gain = st.number_input("Capital Gain", min_value=0)
-capital_loss = st.number_input("Capital Loss", min_value=0)
-hours_per_week = st.number_input("Hours per week", min_value=1, max_value=100)
-native_country = st.selectbox("Native Country", ["United-States", "Mexico", "Philippines", "Germany", "Canada", "India", "England", "China", "Cuba", "Jamaica"])
+# Sidebar inputs (these must match your training feature columns)
+st.sidebar.header("Input Employee Details")
 
-# Prediction button
-if st.button("Predict Salary"):
-    input_data = pd.DataFrame([{
-        "age": age,
-        "workclass": workclass,
-        "education": education,
-        "marital-status": marital_status,
-        "occupation": occupation,
-        "relationship": relationship,
-        "race": race,
-        "sex": gender,
-        "capital-gain": capital_gain,
-        "capital-loss": capital_loss,
-        "hours-per-week": hours_per_week,
-        "native-country": native_country
-    }])
+# ✨ Replace these fields with your dataset's actual input columns
+age = st.sidebar.slider("Age", 18, 65, 30)
+gender = st.sidebar.selectbox("Gender", ["Male", "Female"])
+education = st.sidebar.selectbox("Education Level", [
+    "Bachelors", "Masters", "PhD", "HS-grad", "Assoc", "Some-college"
+])
+occupation = st.sidebar.selectbox("Job Role", [
+    "Tech-support", "Craft-repair", "Other-service", "Sales",
+    "Exec-managerial", "Prof-specialty", "Handlers-cleaners", "Machine-op-inspct",
+    "Adm-clerical", "Farming-fishing", "Transport-moving", "Priv-house-serv",
+    "Protective-serv", "Armed-Forces"
+])
+hours_per_week = st.sidebar.slider("Hours per week", 1, 80, 40)
+experience = st.sidebar.slider("Years of Experience", 0, 40, 5)
 
-    prediction = model.predict(input_data)[0]
+# Build input DataFrame (⚠️ must match preprocessing of your training data)
+input_df = pd.DataFrame({
+    'age': [age],
+    'gender':[gender],
+    'education': [education],
+    'occupation': [occupation],
+    'hours-per-week': [hours_per_week],
+    'experience': [experience]
+})
 
-    if prediction == 1:
-        st.success("✅ Predicted Income: >50K")
-    else:
-        st.success("✅ Predicted Income: <=50K")
+st.write("### 🔎 Input Data")
+st.write(input_df)
+
+# Predict button
+if st.button("Predict Salary Class"):
+    prediction = model.predict(input_df)
+    st.success(f"✅ Prediction: {prediction[0]}")
+
+# Batch prediction
+st.markdown("---")
+st.markdown("#### 📂 Batch Prediction")
+uploaded_file = st.file_uploader("Upload a CSV file for batch prediction", type="csv")
+
+if uploaded_file is not None:
+    batch_data = pd.read_csv(uploaded_file)
+    st.write("Uploaded data preview:", batch_data.head())
+    batch_preds = model.predict(batch_data)
+    batch_data['PredictedClass'] = batch_preds
+    st.write("✅ Predictions:")
+    st.write(batch_data.head())
+    csv = batch_data.to_csv(index=False).encode('utf-8')
+    st.download_button("Download Predictions CSV", csv, file_name='predicted_classes.csv', mime='text/csv')
