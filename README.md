@@ -46,3 +46,23 @@ Features include:
 ```bash
 git clone https://github.com/Ojas-597/Employee-Salary-Predictor-.git
 
+---
+2. Install Requirement :
+
+```bash
+pip install -r requirements.txt
+
+---
+3.Run the app:
+
+```bash
+streamlit run app.py
+
+---
+
+👤 Author
+
+Ojas
+GitHub: https://github.com/Ojas-597
+
+
