@@ -8,9 +8,10 @@ It uses a trained model and a simple Streamlit web app.
 ## 📁 Project Files
 
 - `app.py` → Streamlit web app
-- `best_model.pkl` → Trained ML model
+- `train_model.py` → Trained ML model generates best_model.pkl
 - `adult 3.csv` → Dataset used for training
 - `requirements.txt` → Required Python libraries
+   
 
 ---
 
