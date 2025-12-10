@@ -8,7 +8,8 @@ from sklearn.model_selection import train_test_split
 # -----------------------------
 data = pd.read_csv("adult_3.csv")
 
-print(df.columns)
+# Print column names (for checking)
+print("✅ Columns found:", data.columns)
 
 # -----------------------------
 # Select only required columns
@@ -22,6 +23,11 @@ required_cols = [
     "experience",
     "salary"
 ]
+
+# Check if columns exist
+missing_cols = [col for col in required_cols if col not in data.columns]
+if missing_cols:
+    raise Exception(f"❌ Missing columns in CSV: {missing_cols}")
 
 # Keep only required columns
 data = data[required_cols]
@@ -51,7 +57,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 # -----------------------------
 # Train model
 # -----------------------------
-model = RandomForestClassifier()
+model = RandomForestClassifier(random_state=42)
 model.fit(X_train, y_train)
 
 # -----------------------------
