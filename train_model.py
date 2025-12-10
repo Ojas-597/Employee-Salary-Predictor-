@@ -20,8 +20,7 @@ required_cols = [
     "education",
     "occupation",
     "hours-per-week",
-    "experience",
-    "salary"
+    "income"
 ]
 
 # Check if columns exist
@@ -39,13 +38,13 @@ for col in ["gender", "education", "occupation"]:
     data[col] = data[col].astype("category").cat.codes
 
 # Encode target column
-data["salary"] = data["salary"].astype("category").cat.codes
+data["income"] = data["income"].astype("category").cat.codes
 
 # -----------------------------
 # Split features and target
 # -----------------------------
-X = data.drop("salary", axis=1)
-y = data["salary"]
+X = data.drop("income", axis=1)
+y = data["income"]
 
 # -----------------------------
 # Train/test split
