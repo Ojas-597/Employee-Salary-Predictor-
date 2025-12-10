@@ -20,7 +20,8 @@ required_cols = [
     "education",
     "occupation",
     "hours-per-week",
-    "income"
+    "experience",
+    "salary"
 ]
 
 # Check if columns exist
