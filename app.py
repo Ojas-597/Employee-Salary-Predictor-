@@ -66,6 +66,18 @@ def encode_features(df):
 
 encoded_input = encode_features(input_df.copy())
 
+# ✅ Enforce exact column order used during training
+expected_cols = [
+    "age",
+    "gender",
+    "education",
+    "occupation",
+    "hours-per-week",
+    "experience"
+]
+
+encoded_input = encoded_input[expected_cols]
+
 # -----------------------------
 # Single prediction
 # -----------------------------
