@@ -8,6 +8,8 @@ from sklearn.model_selection import train_test_split
 # -----------------------------
 data = pd.read_csv("adult_3.csv")
 
+print(df.columns)
+
 # -----------------------------
 # Select only required columns
 # -----------------------------
