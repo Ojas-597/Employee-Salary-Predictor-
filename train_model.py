@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 # -----------------------------
 # Load dataset
 # -----------------------------
-data = pd.read_csv("adult_3.csv")
+data = pd.read_csv("adult 3.csv")
 
 print("✅ Columns found:", data.columns)
 
