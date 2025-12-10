@@ -6,9 +6,8 @@ from sklearn.model_selection import train_test_split
 # -----------------------------
 # Load dataset
 # -----------------------------
-data = pd.read_csv("adult 3.csv")
+data = pd.read_csv("adult_3.csv")
 
-# Print column names (for checking)
 print("✅ Columns found:", data.columns)
 
 # -----------------------------
@@ -20,7 +19,6 @@ required_cols = [
     "education",
     "occupation",
     "hours-per-week",
-    "experience",
     "salary"
 ]
 
@@ -29,7 +27,6 @@ missing_cols = [col for col in required_cols if col not in data.columns]
 if missing_cols:
     raise Exception(f"❌ Missing columns in CSV: {missing_cols}")
 
-# Keep only required columns
 data = data[required_cols]
 
 # -----------------------------
@@ -38,14 +35,14 @@ data = data[required_cols]
 for col in ["gender", "education", "occupation"]:
     data[col] = data[col].astype("category").cat.codes
 
-# Encode target column
-data["income"] = data["income"].astype("category").cat.codes
+# Encode target
+data["salary"] = data["salary"].astype("category").cat.codes
 
 # -----------------------------
 # Split features and target
 # -----------------------------
-X = data.drop("income", axis=1)
-y = data["income"]
+X = data.drop("salary", axis=1)
+y = data["salary"]
 
 # -----------------------------
 # Train/test split
