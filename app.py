@@ -3,129 +3,142 @@ import pandas as pd
 import joblib
 import os
 
-# -----------------------------
-# Load model safely
-# -----------------------------
-MODEL_PATH = "best_model.pkl"
+# -------------------------------------------------
+# Page Configuration
+# -------------------------------------------------
+st.set_page_config(
+    page_title="Employee Salary Prediction",
+    page_icon="💼",
+    layout="centered"
+)
 
-if not os.path.exists(MODEL_PATH):
-    st.error("❌ Model file not found. Please run train_model.py first.")
+st.title("💼 Employee Salary Prediction App")
+st.markdown("Predict **annual salary** using experience and inferred skillset.")
+
+# -------------------------------------------------
+# Load Model & Feature Columns
+# -------------------------------------------------
+MODEL_PATH = "best_model.pkl"
+FEATURES_PATH = "model_features.pkl"
+
+if not os.path.exists(MODEL_PATH) or not os.path.exists(FEATURES_PATH):
+    st.error("❌ Model or feature file not found. Please train the model first.")
     st.stop()
 
 model = joblib.load(MODEL_PATH)
+model_features = joblib.load(FEATURES_PATH)
 
-# -----------------------------
-# Page config
-# -----------------------------
-st.set_page_config(page_title="Employee Salary Prediction", page_icon="💼", layout="centered")
+# -------------------------------------------------
+# Skill Mapping (MUST match training)
+# -------------------------------------------------
+def map_skills(occupation):
+    if occupation in ["Tech-support", "Prof-specialty"]:
+        return "Python SQL"
+    elif occupation == "Exec-managerial":
+        return "Leadership Management"
+    elif occupation == "Sales":
+        return "Communication CRM"
+    elif occupation == "Craft-repair":
+        return "Technical"
+    else:
+        return "General"
 
-st.title("💼 Employee Salary Prediction App")
-st.markdown("Predict whether an employee earns **>50K** or **≤50K**.")
-
-# -----------------------------
+# -------------------------------------------------
 # Sidebar Inputs
-# -----------------------------
-st.sidebar.header("Input Employee Details")
+# -------------------------------------------------
+st.sidebar.header("🧑 Employee Details")
 
 age = st.sidebar.slider("Age", 18, 65, 30)
-gender = st.sidebar.selectbox("Gender", ["Male", "Female"])
 
-education = st.sidebar.selectbox("Education Level", [
-    "Bachelors", "Masters", "PhD", "HS-grad", "Assoc", "Some-college"
-])
+occupation = st.sidebar.selectbox(
+    "Occupation",
+    [
+        "Tech-support", "Prof-specialty", "Exec-managerial",
+        "Sales", "Craft-repair", "Other-service"
+    ]
+)
 
-occupation = st.sidebar.selectbox("Job Role", [
-    "Tech-support", "Craft-repair", "Other-service", "Sales",
-    "Exec-managerial", "Prof-specialty", "Handlers-cleaners",
-    "Machine-op-inspct", "Adm-clerical", "Farming-fishing",
-    "Transport-moving", "Priv-house-serv", "Protective-serv",
-    "Armed-Forces"
-])
+hours_per_week = st.sidebar.slider("Hours per Week", 1, 80, 40)
 
-hours_per_week = st.sidebar.slider("Hours per week", 1, 80, 40)
+# -------------------------------------------------
+# Feature Engineering (Same as training)
+# -------------------------------------------------
+experience = max(age - 22, 0)
+skills_str = map_skills(occupation)
 
-# -----------------------------
-# Create Input DataFrame
-# -----------------------------
+# -------------------------------------------------
+# Input DataFrame
+# -------------------------------------------------
 input_df = pd.DataFrame({
-    "age": [age],
-    "gender": [gender],
-    "education": [education],
-    "occupation": [occupation],
+    "Experience": [experience],
+    "Skills_str": [skills_str],
     "hours-per-week": [hours_per_week]
 })
 
-st.subheader("🔎 Input Data Preview")
+st.subheader("🔎 Input Summary")
 st.write(input_df)
 
-# -----------------------------
-# Encode categorical features
-# -----------------------------
-def encode_features(df):
-    for col in ["gender", "education", "occupation"]:
-        df[col] = df[col].astype("category").cat.codes
-    return df
-
-encoded_input = encode_features(input_df.copy())
-
-# -----------------------------
-# Enforce correct column order
-# -----------------------------
-EXPECTED_COLS = [
-    "age",
-    "gender",
-    "education",
-    "occupation",
-    "hours-per-week"
-]
-
-encoded_input = encoded_input[EXPECTED_COLS]
-
-# -----------------------------
-# Single prediction
-# -----------------------------
-if st.button("🔮 Predict Salary Class"):
+# -------------------------------------------------
+# Prediction
+# -------------------------------------------------
+if st.button("🔮 Predict Salary"):
     try:
-        prediction = model.predict(encoded_input)
+        input_encoded = pd.get_dummies(
+            input_df, columns=["Skills_str"], drop_first=True
+        )
 
-        if prediction[0] == 1:
-            st.success("✅ Prediction: Income is **more than 50K**")
-        else:
-            st.success("✅ Prediction: Income is **50K or less**")
+        # Align with training features
+        input_encoded = input_encoded.reindex(
+            columns=model_features, fill_value=0
+        )
+
+        prediction = model.predict(input_encoded)[0]
+        st.success(f"💰 Predicted Annual Salary: ₹ {int(prediction):,}")
+
     except Exception as e:
         st.error(f"⚠️ Prediction error: {e}")
 
-# -----------------------------
-# Batch prediction
-# -----------------------------
+# -------------------------------------------------
+# Batch Prediction
+# -------------------------------------------------
 st.markdown("---")
-st.subheader("📂 Batch Prediction")
+st.subheader("📂 Batch Salary Prediction")
 
-uploaded_file = st.file_uploader("Upload CSV file", type="csv")
+uploaded_file = st.file_uploader(
+    "Upload CSV file with columns: age, occupation, hours-per-week",
+    type=["csv"]
+)
 
-if uploaded_file is not None:
-    batch_data = pd.read_csv(uploaded_file)
-    st.write("📄 Uploaded Data Preview:")
-    st.write(batch_data.head())
-
+if uploaded_file:
     try:
-        # Encode categorical columns
-        for col in ["gender", "education", "occupation"]:
-            if col in batch_data.columns:
-                batch_data[col] = batch_data[col].astype("category").cat.codes()
+        batch_df = pd.read_csv(uploaded_file)
 
-        # Reorder columns
-        batch_data = batch_data[EXPECTED_COLS]
+        # Feature Engineering
+        batch_df["Experience"] = batch_df["age"].apply(lambda x: max(x - 22, 0))
+        batch_df["Skills_str"] = batch_df["occupation"].apply(map_skills)
 
-        # Make predictions
-        preds = model.predict(batch_data)
-        batch_data["PredictedClass"] = preds
+        batch_df = batch_df[["Experience", "Skills_str", "hours-per-week"]]
 
-        st.success("✅ Predictions completed!")
-        st.write(batch_data.head())
+        batch_encoded = pd.get_dummies(
+            batch_df, columns=["Skills_str"], drop_first=True
+        )
 
-        csv = batch_data.to_csv(index=False).encode("utf-8")
-        st.download_button("⬇️ Download Results", csv, "predicted_salaries.csv", "text/csv")
+        batch_encoded = batch_encoded.reindex(
+            columns=model_features, fill_value=0
+        )
+
+        batch_df["Predicted_Salary"] = model.predict(batch_encoded).astype(int)
+
+        st.success("✅ Batch prediction completed")
+        st.write(batch_df.head())
+
+        csv = batch_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "⬇️ Download Predictions",
+            csv,
+            "predicted_salaries.csv",
+            "text/csv"
+        )
 
     except Exception as e:
         st.error(f"⚠️ Batch prediction error: {e}")
