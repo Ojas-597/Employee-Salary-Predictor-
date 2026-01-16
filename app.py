@@ -44,10 +44,11 @@ def map_skills(occupation):
         return "General"
 
 # -----------------------------
-# SIDEBAR
+# SIDEBAR INPUTS
 # -----------------------------
 st.sidebar.header("🧑 Employee Details")
 
+# Inputs
 age = st.sidebar.slider("Age", 18, 65, 30)
 experience_auto = max(age - 22, 0)
 experience = st.sidebar.number_input("Experience (years, editable)", min_value=0, max_value=50, value=experience_auto)
@@ -64,6 +65,13 @@ skills_str = st.sidebar.selectbox(
 
 hours_per_week = st.sidebar.slider("Hours per Week", 1, 80, 40)
 
+# Sidebar: Derived Features Display
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔹 Current Derived Features")
+st.sidebar.write(f"**Experience:** {experience} years")
+st.sidebar.write(f"**Skills:** {skills_str}")
+
+# Sidebar: Security Info
 st.sidebar.markdown("---")
 st.sidebar.subheader("ℹ️ Security Notes")
 st.sidebar.markdown("""
@@ -73,13 +81,13 @@ st.sidebar.markdown("""
 """)
 
 # -----------------------------
-# Input Summary (Main Page)
+# MAIN PAGE: Input Summary
 # -----------------------------
 st.subheader("🔎 Input Summary")
 input_df = pd.DataFrame({
     "Experience": [experience],
     "Skills": [skills_str],
-    "Hours-per-week": [hours_per_week]
+    "hours-per-week": [hours_per_week]
 })
 st.table(input_df)
 
@@ -90,8 +98,13 @@ with st.container():
     st.subheader("🔮 Single Employee Prediction")
     if st.button("Predict Salary"):
         try:
-            input_encoded = pd.get_dummies(input_df, columns=["Skills"], drop_first=True)
+            # One-hot encode Skills without dropping first
+            input_encoded = pd.get_dummies(input_df, columns=["Skills"])
+            
+            # Align columns with model features
             input_encoded = input_encoded.reindex(columns=model_features, fill_value=0)
+            
+            # Predict
             prediction = model.predict(input_encoded)[0]
             st.success(f"💰 Predicted Annual Salary: ₹ {int(prediction):,}")
         except Exception as e:
@@ -108,24 +121,30 @@ with st.expander("📂 Batch Salary Prediction (Upload CSV)"):
     if uploaded_file:
         try:
             batch_df = pd.read_csv(uploaded_file)
+
             # Validate columns
             required_cols = ["age", "occupation", "hours-per-week"]
             missing = [col for col in required_cols if col not in batch_df.columns]
             if missing:
                 st.error(f"Missing columns: {missing}")
             else:
+                # Derived features
                 batch_df["Experience"] = batch_df["age"].apply(lambda x: max(x - 22, 0))
                 batch_df["Skills"] = batch_df["occupation"].apply(map_skills)
+                
                 batch_model = batch_df[["Experience", "Skills", "hours-per-week"]]
-                batch_encoded = pd.get_dummies(batch_model, columns=["Skills"], drop_first=True)
+                batch_encoded = pd.get_dummies(batch_model, columns=["Skills"])
                 batch_encoded = batch_encoded.reindex(columns=model_features, fill_value=0)
+                
+                # Predict
                 batch_df["Predicted_Salary"] = model.predict(batch_encoded).astype(int)
-
+                
                 st.success("✅ Batch prediction completed")
                 st.dataframe(batch_df.head())
-
+                
+                # Download button
                 csv = batch_df.to_csv(index=False).encode("utf-8")
                 st.download_button("⬇️ Download Predictions", csv, "predicted_salaries.csv", "text/csv")
-
         except Exception as e:
             st.error(f"⚠️ Batch prediction error: {e}")
+
