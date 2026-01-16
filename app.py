@@ -3,9 +3,9 @@ import pandas as pd
 import joblib
 import os
 
-# -------------------------------------------------
-# Page Configuration
-# -------------------------------------------------
+# -----------------------------
+# Page Config
+# -----------------------------
 st.set_page_config(
     page_title="Employee Salary Prediction",
     page_icon="💼",
@@ -15,9 +15,9 @@ st.set_page_config(
 st.title("💼 Employee Salary Prediction App")
 st.markdown("Predict **annual salary** using experience and inferred skillset.")
 
-# -------------------------------------------------
-# Load Model & Feature Columns
-# -------------------------------------------------
+# -----------------------------
+# Load Model & Features
+# -----------------------------
 MODEL_PATH = "best_model.pkl"
 FEATURES_PATH = "model_features.pkl"
 
@@ -28,9 +28,9 @@ if not os.path.exists(MODEL_PATH) or not os.path.exists(FEATURES_PATH):
 model = joblib.load(MODEL_PATH)
 model_features = joblib.load(FEATURES_PATH)
 
-# -------------------------------------------------
-# Skill Mapping (MUST match training)
-# -------------------------------------------------
+# -----------------------------
+# Skill Mapping Function
+# -----------------------------
 def map_skills(occupation):
     if occupation in ["Tech-support", "Prof-specialty"]:
         return "Python SQL"
@@ -43,69 +43,68 @@ def map_skills(occupation):
     else:
         return "General"
 
-# -------------------------------------------------
-# Sidebar Inputs
-# -------------------------------------------------
+# -----------------------------
+# SIDEBAR
+# -----------------------------
 st.sidebar.header("🧑 Employee Details")
 
+# Inputs
 age = st.sidebar.slider("Age", 18, 65, 30)
-
 occupation = st.sidebar.selectbox(
     "Occupation",
-    [
-        "Tech-support", "Prof-specialty", "Exec-managerial",
-        "Sales", "Craft-repair", "Other-service"
-    ]
+    ["Tech-support", "Prof-specialty", "Exec-managerial", "Sales", "Craft-repair", "Other-service"]
 )
-
 hours_per_week = st.sidebar.slider("Hours per Week", 1, 80, 40)
 
-# -------------------------------------------------
-# Feature Engineering (Same as training)
-# -------------------------------------------------
+# Derived Features (update live)
 experience = max(age - 22, 0)
 skills_str = map_skills(occupation)
 
-# -------------------------------------------------
-# Input DataFrame
-# -------------------------------------------------
+# Display derived features in sidebar
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔹 Derived Features (Live)")
+st.sidebar.write(f"**Experience:** {experience} years")
+st.sidebar.write(f"**Skills:** {skills_str}")
+
+# Security / Info
+st.sidebar.markdown("---")
+st.sidebar.subheader("ℹ️ Security Notes")
+st.sidebar.markdown("""
+- Only CSV files are allowed for batch prediction  
+- Data is processed in memory; nothing is stored  
+- Invalid inputs are validated to prevent errors  
+""")
+
+# -----------------------------
+# Input Summary (main page)
+# -----------------------------
+st.subheader("🔎 Input Summary")
 input_df = pd.DataFrame({
     "Experience": [experience],
-    "Skills_str": [skills_str],
-    "hours-per-week": [hours_per_week]
+    "Skills": [skills_str],
+    "Hours-per-week": [hours_per_week]
 })
-
-st.subheader("🔎 Input Summary")
 st.write(input_df)
 
-# -------------------------------------------------
-# Prediction
-# -------------------------------------------------
+# -----------------------------
+# Single Prediction
+# -----------------------------
 if st.button("🔮 Predict Salary"):
     try:
-        input_encoded = pd.get_dummies(
-            input_df, columns=["Skills_str"], drop_first=True
-        )
-
-        # Align with training features
-        input_encoded = input_encoded.reindex(
-            columns=model_features, fill_value=0
-        )
-
+        input_encoded = pd.get_dummies(input_df, columns=["Skills"], drop_first=True)
+        input_encoded = input_encoded.reindex(columns=model_features, fill_value=0)
         prediction = model.predict(input_encoded)[0]
         st.success(f"💰 Predicted Annual Salary: ₹ {int(prediction):,}")
-
     except Exception as e:
         st.error(f"⚠️ Prediction error: {e}")
 
-# -------------------------------------------------
+# -----------------------------
 # Batch Prediction
-# -------------------------------------------------
+# -----------------------------
 st.markdown("---")
 st.subheader("📂 Batch Salary Prediction")
-
 uploaded_file = st.file_uploader(
-    "Upload CSV file with columns: age, occupation, hours-per-week",
+    "Upload CSV with columns: age, occupation, hours-per-week",
     type=["csv"]
 )
 
@@ -113,32 +112,27 @@ if uploaded_file:
     try:
         batch_df = pd.read_csv(uploaded_file)
 
-        # Feature Engineering
-        batch_df["Experience"] = batch_df["age"].apply(lambda x: max(x - 22, 0))
-        batch_df["Skills_str"] = batch_df["occupation"].apply(map_skills)
+        # Validate columns
+        required_cols = ["age", "occupation", "hours-per-week"]
+        missing = [col for col in required_cols if col not in batch_df.columns]
+        if missing:
+            st.error(f"Missing columns: {missing}")
+        else:
+            # Derived features
+            batch_df["Experience"] = batch_df["age"].apply(lambda x: max(x - 22, 0))
+            batch_df["Skills"] = batch_df["occupation"].apply(map_skills)
 
-        batch_df = batch_df[["Experience", "Skills_str", "hours-per-week"]]
+            batch_df_model = batch_df[["Experience", "Skills", "hours-per-week"]]
+            batch_encoded = pd.get_dummies(batch_df_model, columns=["Skills"], drop_first=True)
+            batch_encoded = batch_encoded.reindex(columns=model_features, fill_value=0)
 
-        batch_encoded = pd.get_dummies(
-            batch_df, columns=["Skills_str"], drop_first=True
-        )
+            # Predict
+            batch_df["Predicted_Salary"] = model.predict(batch_encoded).astype(int)
+            st.success("✅ Batch prediction completed")
+            st.write(batch_df.head())
 
-        batch_encoded = batch_encoded.reindex(
-            columns=model_features, fill_value=0
-        )
-
-        batch_df["Predicted_Salary"] = model.predict(batch_encoded).astype(int)
-
-        st.success("✅ Batch prediction completed")
-        st.write(batch_df.head())
-
-        csv = batch_df.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            "⬇️ Download Predictions",
-            csv,
-            "predicted_salaries.csv",
-            "text/csv"
-        )
+            csv = batch_df.to_csv(index=False).encode("utf-8")
+            st.download_button("⬇️ Download Predictions", csv, "predicted_salaries.csv", "text/csv")
 
     except Exception as e:
         st.error(f"⚠️ Batch prediction error: {e}")
